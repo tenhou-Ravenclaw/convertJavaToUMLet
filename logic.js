@@ -360,7 +360,10 @@ class UMLetGenerator {
                 const staticModifier = field.modifiers.has('static') ? ' {static}' : '';
                 const finalModifier = field.modifiers.has('final') ? ' {final}' : '';
                 const modifiers = staticModifier + finalModifier;
-                output += `${visibility} ${field.name} : ${field.type}${modifiers}\n`;
+                const fieldName = field.modifiers.has('final') ? `_${field.name}_` : field.name;
+                const fieldLine = `${visibility} ${fieldName} : ${field.type}${modifiers}`;
+                const finalFieldLine = field.modifiers.has('static') ? `_${fieldLine}_` : fieldLine;
+                output += `${finalFieldLine}\n`;
             }
         } else {
             // フィールドがない場合は空行を追加
@@ -385,8 +388,15 @@ class UMLetGenerator {
             const params = method.parameters.map(p => `${p.name} : ${p.type}`).join(', ');
             const modifiers = staticModifier + abstractModifier + finalModifier;
             const returnType = method.returnType || 'void';
-            const methodLine = `${visibility} ${method.name}(${params}) : ${returnType}${modifiers}`;
-            const finalMethodLine = method.isAbstract ? `/${methodLine}/` : methodLine;
+            let methodLine = `${visibility} ${method.name}(${params}) : ${returnType}${modifiers}`;
+            
+            // abstractの場合は斜線で挟む
+            if (method.isAbstract) {
+                methodLine = `/${methodLine}/`;
+            }
+            
+            // staticの場合はアンダースコアで挟む
+            const finalMethodLine = method.modifiers.has('static') ? `_${methodLine}_` : methodLine;
             output += `${finalMethodLine}\n`;
         }
 
