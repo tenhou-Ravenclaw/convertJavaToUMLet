@@ -228,7 +228,7 @@ class JavaParser {
                 const modifiers = [];
                 if (match[1]) modifiers.push(match[1]); // visibility
                 if (match[2]) modifiers.push(match[2]); // static
-                if (match[3]) modifiers.push(match[3]); // final
+                // finalは無視する
 
                 const field = new JavaField(match[5], match[4], modifiers);
                 javaClass.fields.push(field);
@@ -254,7 +254,8 @@ class JavaParser {
                 const modifiers = [];
                 if (match[1]) modifiers.push(match[1]); // visibility
                 if (match[2]) modifiers.push(match[2]); // static
-                if (match[3]) modifiers.push(match[3]); // final/abstract
+                // finalは無視、abstractのみ処理
+                if (match[3] && match[3] === 'abstract') modifiers.push(match[3]);
 
                 const methodName = match[5];
                 const returnType = match[4]; // コンストラクタの場合はundefined
@@ -361,12 +362,7 @@ class UMLetGenerator {
                 const visibility = UMLetGenerator.getVisibilitySymbol(field.modifiers);
                 let fieldLine = `${visibility} ${field.name} : ${field.type}`;
 
-                // finalの場合は行全体を囲む
-                if (field.modifiers.has('final')) {
-                    fieldLine = `_${fieldLine}_`;
-                }
-
-                // staticの場合は行全体を囲む
+                // staticの場合のみ行全体を囲む
                 if (field.modifiers.has('static')) {
                     fieldLine = `_${fieldLine}_`;
                 }
