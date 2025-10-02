@@ -454,6 +454,58 @@ class UMLetGenerator {
 
         return output;
     }
+
+    /**
+     * クラス間の関係線生成（人間が読みやすい形式）
+     */
+    static generateRelationshipsHumanReadable(classes) {
+        let output = '';
+        let relationshipCount = 0;
+
+        for (const javaClass of classes) {
+            // 継承関係
+            if (javaClass.superClass) {
+                relationshipCount++;
+                output += `${relationshipCount}. 継承関係:\n`;
+                output += `   ${javaClass.name} ───▷ ${javaClass.superClass}\n`;
+                output += `   （${javaClass.name} が ${javaClass.superClass} を継承）\n\n`;
+
+                // UMLet用の記法も併記
+                output += `   UMLet記法:\n`;
+                output += `   type=lt=<|-\n`;
+                output += `   ${javaClass.superClass}\n`;
+                output += `   ${javaClass.name}\n\n`;
+            }
+
+            // 実装関係
+            for (const interfaceName of javaClass.interfaces) {
+                relationshipCount++;
+                output += `${relationshipCount}. 実装関係:\n`;
+                output += `   ${javaClass.name} ┈┈┈▷ ${interfaceName}\n`;
+                output += `   （${javaClass.name} が ${interfaceName} を実装）\n\n`;
+
+                // UMLet用の記法も併記
+                output += `   UMLet記法:\n`;
+                output += `   type=lt=<<|..\n`;
+                output += `   ${interfaceName}\n`;
+                output += `   ${javaClass.name}\n\n`;
+            }
+        }
+
+        if (relationshipCount === 0) {
+            output = 'クラス間の関係性は見つかりませんでした。\n\n';
+            output += '確認ポイント:\n';
+            output += '- extends キーワードによる継承関係\n';
+            output += '- implements キーワードによるインターフェース実装\n';
+        } else {
+            // サマリーを先頭に追加
+            const summary = `■ 関係線の概要\n`;
+            const summaryContent = `発見された関係性: ${relationshipCount}個\n\n`;
+            output = summary + summaryContent + output;
+        }
+
+        return output;
+    }
 }
 
 /**
@@ -531,6 +583,17 @@ class JavaToUMLetConverter {
      * 関係線定義のみを生成（コメントなし）
      */
     generateRelationshipDefinitions(parseResult) {
+        if (parseResult.classes.length <= 1) {
+            return '関係線はありません（クラスが1つのみ、または関係性がありません）';
+        }
+
+        return UMLetGenerator.generateRelationshipsHumanReadable(parseResult.classes).trim();
+    }
+
+    /**
+     * 関係線定義をUMLet記法で生成
+     */
+    generateRelationshipDefinitionsUMLet(parseResult) {
         if (parseResult.classes.length <= 1) {
             return '// 関係線はありません（クラスが1つのみ、または関係性がありません）';
         }

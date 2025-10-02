@@ -99,6 +99,24 @@
             margin: 10px 0;
             color: #007bff;
         }
+
+        .format-selector {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .format-selector label {
+            margin-right: 15px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .format-selector input[type="radio"] {
+            margin-right: 5px;
+        }
     </style>
 </head>
 
@@ -146,6 +164,16 @@ public class Car extends AbstractVehicle implements Vehicle {
 
         <div class="column">
             <h2>関係線定義</h2>
+            <div class="format-selector">
+                <label>
+                    <input type="radio" name="relationshipFormat" value="readable" checked>
+                    分かりやすい表示
+                </label>
+                <label>
+                    <input type="radio" name="relationshipFormat" value="umlet">
+                    UMLet記法
+                </label>
+            </div>
             <textarea id="relationshipOutput" readonly></textarea>
         </div>
     </div>
@@ -163,20 +191,42 @@ public class Car extends AbstractVehicle implements Vehicle {
             const classDefinitionOutput = document.getElementById('classDefinitionOutput');
             const relationshipOutput = document.getElementById('relationshipOutput');
 
+            // 関係線定義を更新する関数
+            function updateRelationshipOutput(parseResult) {
+                const formatRadios = document.getElementsByName('relationshipFormat');
+                let selectedFormat = 'readable'; // デフォルト
+
+                for (const radio of formatRadios) {
+                    if (radio.checked) {
+                        selectedFormat = radio.value;
+                        break;
+                    }
+                }
+
+                let relationships;
+                if (selectedFormat === 'umlet') {
+                    relationships = converter.generateRelationshipDefinitionsUMLet(parseResult);
+                } else {
+                    relationships = converter.generateRelationshipDefinitions(parseResult);
+                }
+
+                relationshipOutput.value = relationships;
+            }
+
             convertButton.addEventListener('click', () => {
                 try {
                     const javaCode = javaCodeInput.value.trim();
 
                     // コンバーターを使用してJavaコードを解析
                     const parseResult = converter.parseOnly(javaCode);
+                    lastParseResult = parseResult; // 結果を保存
 
                     // クラス定義を生成（コメントなし）
                     const classDefinitions = converter.generateClassDefinitions(parseResult);
                     classDefinitionOutput.value = classDefinitions;
 
-                    // 関係線定義を生成（コメントなし）
-                    const relationships = converter.generateRelationshipDefinitions(parseResult);
-                    relationshipOutput.value = relationships;
+                    // 関係線定義を生成（選択された形式で）
+                    updateRelationshipOutput(parseResult);
 
                 } catch (error) {
                     console.error('解析エラー:', error);
@@ -192,6 +242,15 @@ public class Car extends AbstractVehicle implements Vehicle {
 
                     classDefinitionOutput.value = errorMessage;
                     relationshipOutput.value = '';
+                    lastParseResult = null;
+                }
+            });
+
+            // ラジオボタンの変更時にも関係線定義を更新
+            let lastParseResult = null;
+            document.addEventListener('change', (event) => {
+                if (event.target.name === 'relationshipFormat' && lastParseResult) {
+                    updateRelationshipOutput(lastParseResult);
                 }
             });
         });
