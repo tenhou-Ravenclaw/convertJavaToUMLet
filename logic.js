@@ -373,9 +373,7 @@ class JavaParser {
                 this.analyzeClassRelationships(javaClass, classBody);
             }
         }
-    }
-
-    /**
+    }    /**
      * クラス本体の開始位置を検索
      */
     findClassBodyStart(code, className) {
@@ -397,19 +395,8 @@ class JavaParser {
      * 個別クラスの関係性を解析
      */
     analyzeClassRelationships(javaClass, classBody) {
-        // コンストラクタとメソッドを分けて解析
-        const constructorBodies = this.extractConstructorBodies(classBody, javaClass.name);
-        const methodBodies = this.extractMethodBodies(classBody, javaClass.name);
-
-        // コンポジション関係（コンストラクタ内でのnew演算子）を検出
-        for (const constructorBody of constructorBodies) {
-            this.findCompositionRelationships(javaClass.name, constructorBody);
-        }
-
-        // 集約関係（コンストラクタ以外でのnew演算子）を検出
-        for (const methodBody of methodBodies) {
-            this.findAggregationRelationships(javaClass.name, methodBody);
-        }
+        // フィールドに基づく所有関係（コンポジション・集約）を検出
+        this.findOwnershipRelationships(javaClass, classBody);
 
         // 依存関係（メソッド引数での使用）を検出
         this.findDependencyRelationships(javaClass, classBody);
@@ -485,48 +472,105 @@ class JavaParser {
     }
 
     /**
-     * コンポジション関係の検出
+     * 所有関係（コンポジション・集約）の検出
+     * フィールドで宣言されているクラスに対してのみ適用
      */
-    findCompositionRelationships(className, constructorBody) {
+    findOwnershipRelationships(javaClass, classBody) {
+        // フィールドで宣言されているクラス型を取得
+        const fieldTypes = new Set();
+        for (const field of javaClass.fields) {
+            const fieldType = this.extractBaseType(field.type);
+            if (!this.isBasicType(fieldType)) {
+                fieldTypes.add(fieldType);
+            }
+        }
+
+        if (fieldTypes.size === 0) {
+            return; // フィールドがない場合は所有関係なし
+        }
+
+        // コンストラクタ本体を取得してコンポジション関係を検出
+        const constructorBodies = this.extractConstructorBodies(classBody, javaClass.name);
+        for (const constructorBody of constructorBodies) {
+            this.findCompositionInConstructor(javaClass.name, constructorBody, fieldTypes);
+        }
+
+        // メソッド本体を取得して集約関係を検出
+        const methodBodies = this.extractMethodBodies(classBody, javaClass.name);
+        for (const methodBody of methodBodies) {
+            this.findAggregationInMethods(javaClass.name, methodBody, fieldTypes);
+        }
+
+        // フィールドのみの関連関係を検出（new演算子がない場合）
+        this.findFieldOnlyAssociation(javaClass, fieldTypes);
+    }
+
+    /**
+     * コンストラクタ内でのコンポジション関係検出
+     */
+    findCompositionInConstructor(className, constructorBody, fieldTypes) {
         const newPattern = /new\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
         let match;
 
         while ((match = newPattern.exec(constructorBody)) !== null) {
             const targetClass = match[1];
-            // 基本型やString、コレクション類は除外
-            if (!this.isBasicType(targetClass)) {
+
+            // フィールドで宣言されているクラスのみコンポジション対象
+            if (fieldTypes.has(targetClass)) {
                 this.allRelationships.push(new Relationship(
                     className,
                     targetClass,
                     RELATIONSHIP_TYPES.COMPOSITION,
-                    { location: 'constructor' }
+                    { location: 'constructor', hasField: true }
                 ));
+
+                // このクラスは処理済みとしてマーク
+                fieldTypes.delete(targetClass);
             }
         }
     }
 
     /**
-     * 集約関係の検出
+     * メソッド内での集約関係検出
      */
-    findAggregationRelationships(className, methodBody) {
+    findAggregationInMethods(className, methodBody, fieldTypes) {
         const newPattern = /new\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
         let match;
 
         while ((match = newPattern.exec(methodBody)) !== null) {
             const targetClass = match[1];
 
-            // 基本型やString、コレクション類は除外
-            if (!this.isBasicType(targetClass)) {
-                // 集約関係を追加（コンポジション関係があっても追加する）
+            // フィールドで宣言されているクラスのみ集約対象
+            if (fieldTypes.has(targetClass)) {
                 this.allRelationships.push(new Relationship(
                     className,
                     targetClass,
                     RELATIONSHIP_TYPES.AGGREGATION,
-                    { location: 'method' }
+                    { location: 'method', hasField: true }
                 ));
+
+                // このクラスは処理済みとしてマーク
+                fieldTypes.delete(targetClass);
             }
         }
-    }    /**
+    }
+
+    /**
+     * フィールドのみの関連関係検出
+     */
+    findFieldOnlyAssociation(javaClass, remainingFieldTypes) {
+        // まだ処理されていないフィールド型は単純な関連関係
+        for (const fieldType of remainingFieldTypes) {
+            this.allRelationships.push(new Relationship(
+                javaClass.name,
+                fieldType,
+                RELATIONSHIP_TYPES.ASSOCIATION,
+                { field: true, hasNewOperator: false }
+            ));
+        }
+    }
+
+    /**
      * 依存関係の検出（メソッド引数）
      */
     findDependencyRelationships(javaClass, classBody) {
@@ -555,31 +599,34 @@ class JavaParser {
     }
 
     /**
-     * 関連関係の検出（フィールド参照）
+     * 関連関係の検出（フィールド参照で、所有関係でないもの）
+     * 注意：このメソッドは現在findFieldOnlyAssociationで処理されているため、
+     * 追加の関連関係（メソッド戻り値型など）のみを検出
      */
     findAssociationRelationships(javaClass, classBody) {
-        for (const field of javaClass.fields) {
-            const fieldType = this.extractBaseType(field.type);
-            if (!this.isBasicType(fieldType)) {
-                // 既に他の関係がある場合は除外
-                const hasOtherRelation = this.allRelationships.some(rel =>
-                    rel.fromClass === javaClass.name &&
-                    rel.toClass === fieldType
-                );
+        // メソッドの戻り値型による関連関係を検出
+        for (const method of javaClass.methods) {
+            if (method.returnType && method.returnType !== 'void') {
+                const returnType = this.extractBaseType(method.returnType);
+                if (!this.isBasicType(returnType)) {
+                    // 既に他の関係がある場合は除外
+                    const hasOtherRelation = this.allRelationships.some(rel =>
+                        rel.fromClass === javaClass.name &&
+                        rel.toClass === returnType
+                    );
 
-                if (!hasOtherRelation) {
-                    this.allRelationships.push(new Relationship(
-                        javaClass.name,
-                        fieldType,
-                        RELATIONSHIP_TYPES.ASSOCIATION,
-                        { field: field.name }
-                    ));
+                    if (!hasOtherRelation) {
+                        this.allRelationships.push(new Relationship(
+                            javaClass.name,
+                            returnType,
+                            RELATIONSHIP_TYPES.ASSOCIATION,
+                            { returnType: method.name }
+                        ));
+                    }
                 }
             }
         }
-    }
-
-    /**
+    }    /**
      * 基本型かどうかの判定
      */
     isBasicType(typeName) {
