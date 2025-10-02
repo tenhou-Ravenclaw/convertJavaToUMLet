@@ -346,8 +346,6 @@ class UMLetGenerator {
         // クラス/インターフェースの種類表示
         if (javaClass.type === 'interface') {
             output += '<<interface>>\n';
-        } else if (javaClass.modifiers.has('abstract')) {
-            output += '<<abstract>>\n';
         } else if (javaClass.type === 'enum') {
             output += '<<enumeration>>\n';
         }
