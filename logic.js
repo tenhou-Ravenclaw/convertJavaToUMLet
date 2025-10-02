@@ -214,7 +214,7 @@ class JavaParser {
      */
     parseFields(javaClass, classBody) {
         // フィールド定義のパターン（改良版）
-        const fieldPattern = /\b(public|private|protected)?\s*(static|final)?\s*([a-zA-Z_][a-zA-Z0-9_<>\[\]]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=\s*[^;]+)?\s*;/g;
+        const fieldPattern = /\b(public|private|protected)?\s*(?:(static)\s+)?\s*(?:(final)\s+)?\s*([a-zA-Z_][a-zA-Z0-9_<>\[\]]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:=\s*[^;]+)?\s*;/g;
 
         let match;
         while ((match = fieldPattern.exec(classBody)) !== null) {
@@ -226,10 +226,11 @@ class JavaParser {
             // クラスレベルのフィールドのみを対象とする
             if (openBraces === closeBraces) {
                 const modifiers = [];
-                if (match[1]) modifiers.push(match[1]);
-                if (match[2]) modifiers.push(match[2]);
+                if (match[1]) modifiers.push(match[1]); // visibility
+                if (match[2]) modifiers.push(match[2]); // static
+                if (match[3]) modifiers.push(match[3]); // final
 
-                const field = new JavaField(match[4], match[3], modifiers);
+                const field = new JavaField(match[5], match[4], modifiers);
                 javaClass.fields.push(field);
             }
         }
@@ -239,8 +240,8 @@ class JavaParser {
      * メソッドの解析
      */
     parseMethods(javaClass, classBody) {
-        // メソッド定義のパターン（改良版）
-        const methodPattern = /\b(public|private|protected)?\s*(static|final|abstract)?\s*([a-zA-Z_][a-zA-Z0-9_<>\[\]]*|void)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:throws\s+[^{;]+)?\s*[{;]/g;
+        // メソッド定義のパターン（改良版）- コンストラクタと通常メソッドの両方に対応
+        const methodPattern = /\b(public|private|protected)?\s*(?:(static)\s+)?\s*(?:(final|abstract)\s+)?\s*(?:([a-zA-Z_][a-zA-Z0-9_<>\[\]]*|void)\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:throws\s+[^{;]+)?\s*[{;]/g;
 
         let match;
         while ((match = methodPattern.exec(classBody)) !== null) {
@@ -251,13 +252,16 @@ class JavaParser {
 
             if (openBraces === closeBraces) {
                 const modifiers = [];
-                if (match[1]) modifiers.push(match[1]);
-                if (match[2]) modifiers.push(match[2]);
+                if (match[1]) modifiers.push(match[1]); // visibility
+                if (match[2]) modifiers.push(match[2]); // static
+                if (match[3]) modifiers.push(match[3]); // final/abstract
 
-                const method = new JavaMethod(match[4], match[3], modifiers);
+                const methodName = match[5];
+                const returnType = match[4]; // コンストラクタの場合はundefined
+                const method = new JavaMethod(methodName, returnType, modifiers);
 
                 // コンストラクタかどうかの判定
-                method.isConstructor = (match[4] === javaClass.name);
+                method.isConstructor = (methodName === javaClass.name);
                 if (method.isConstructor) {
                     method.returnType = null;
                 }
@@ -266,8 +270,8 @@ class JavaParser {
                 method.isAbstract = modifiers.includes('abstract') || javaClass.type === 'interface';
 
                 // パラメータの解析
-                if (match[5].trim()) {
-                    method.parameters = this.parseParameters(match[5]);
+                if (match[6].trim()) {
+                    method.parameters = this.parseParameters(match[6]);
                 }
 
                 if (method.isConstructor) {
@@ -408,7 +412,7 @@ class UMLetGenerator {
         if (modifiers.has('private')) return '-';
         if (modifiers.has('protected')) return '#';
         if (modifiers.has('public')) return '+';
-        return '+'; // デフォルトはpublic
+        return '~'; // デフォルトはpackage-private
     }
 
     /**
