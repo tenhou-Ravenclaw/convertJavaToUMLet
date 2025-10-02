@@ -289,8 +289,10 @@ class JavaParser {
         for (const part of paramParts) {
             const trimmed = part.trim();
             if (trimmed) {
-                const paramMatch = trimmed.match(/([a-zA-Z_][a-zA-Z0-9_<>\[\]]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+                // final修飾子がある場合も考慮するが、修飾子は無視して型と名前のみを抽出
+                const paramMatch = trimmed.match(/(?:final\s+)?([a-zA-Z_][a-zA-Z0-9_<>\[\]]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
                 if (paramMatch) {
+                    // paramMatch[1] = 型, paramMatch[2] = 名前（final修飾子は無視）
                     parameters.push(new JavaParameter(paramMatch[2], paramMatch[1]));
                 }
             }
