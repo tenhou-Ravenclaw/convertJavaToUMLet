@@ -357,11 +357,8 @@ class UMLetGenerator {
         if (javaClass.fields.length > 0) {
             for (const field of javaClass.fields) {
                 const visibility = UMLetGenerator.getVisibilitySymbol(field.modifiers);
-                const staticModifier = field.modifiers.has('static') ? ' {static}' : '';
-                const finalModifier = field.modifiers.has('final') ? ' {final}' : '';
-                const modifiers = staticModifier + finalModifier;
                 const fieldName = field.modifiers.has('final') ? `_${field.name}_` : field.name;
-                const fieldLine = `${visibility} ${fieldName} : ${field.type}${modifiers}`;
+                const fieldLine = `${visibility} ${fieldName} : ${field.type}`;
                 const finalFieldLine = field.modifiers.has('static') ? `_${fieldLine}_` : fieldLine;
                 output += `${finalFieldLine}\n`;
             }
@@ -382,19 +379,15 @@ class UMLetGenerator {
         // メソッド
         for (const method of javaClass.methods) {
             const visibility = UMLetGenerator.getVisibilitySymbol(method.modifiers);
-            const staticModifier = method.modifiers.has('static') ? ' {static}' : '';
-            const abstractModifier = method.isAbstract ? ' {abstract}' : '';
-            const finalModifier = method.modifiers.has('final') ? ' {final}' : '';
             const params = method.parameters.map(p => `${p.name} : ${p.type}`).join(', ');
-            const modifiers = staticModifier + abstractModifier + finalModifier;
             const returnType = method.returnType || 'void';
-            let methodLine = `${visibility} ${method.name}(${params}) : ${returnType}${modifiers}`;
-            
+            let methodLine = `${visibility} ${method.name}(${params}) : ${returnType}`;
+
             // abstractの場合は斜線で挟む
             if (method.isAbstract) {
                 methodLine = `/${methodLine}/`;
             }
-            
+
             // staticの場合はアンダースコアで挟む
             const finalMethodLine = method.modifiers.has('static') ? `_${methodLine}_` : methodLine;
             output += `${finalMethodLine}\n`;
