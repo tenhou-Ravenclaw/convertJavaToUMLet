@@ -349,7 +349,8 @@ class UMLetGenerator {
         }
 
         // クラス名
-        output += `${javaClass.name}\n`;
+        const classNameLine = javaClass.modifiers.has('abstract') ? `/${javaClass.name}/` : javaClass.name;
+        output += `${classNameLine}\n`;
         output += '--\n';
 
         // フィールド
@@ -384,7 +385,9 @@ class UMLetGenerator {
             const params = method.parameters.map(p => `${p.name} : ${p.type}`).join(', ');
             const modifiers = staticModifier + abstractModifier + finalModifier;
             const returnType = method.returnType || 'void';
-            output += `${visibility} ${method.name}(${params}) : ${returnType}${modifiers}\n`;
+            const methodLine = `${visibility} ${method.name}(${params}) : ${returnType}${modifiers}`;
+            const finalMethodLine = method.isAbstract ? `/${methodLine}/` : methodLine;
+            output += `${finalMethodLine}\n`;
         }
 
         // メソッドまたはコンストラクタがない場合は空行を追加
