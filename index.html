@@ -108,31 +108,7 @@
     <div class="container">
         <div class="column">
             <h2>Javaソースコード</h2>
-            <textarea id="javaCodeInput" placeholder="ここにJavaソースコードを貼り付けてください。">
-// Java Source Code (入力)
-public interface Vehicle {
-    void start();
-}
-
-public class Car extends AbstractVehicle implements Vehicle {
-    private String modelName;
-    public int speed = 0;
-
-    public Car(String modelName) {
-        this.modelName = modelName;
-    }
-
-    // AbstractVehicleのメソッドをオーバーライド
-    @Override
-    public void start() {
-        System.out.println("Car started.");
-    }
-
-    public void accelerate(int amount) {
-        this.speed += amount;
-    }
-}
-            </textarea>
+            <textarea id="javaCodeInput" placeholder="ここにJavaソースコードを貼り付けてください。"></textarea>
         </div>
 
         <div class="center-controls">
