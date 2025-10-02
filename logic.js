@@ -359,10 +359,19 @@ class UMLetGenerator {
         if (javaClass.fields.length > 0) {
             for (const field of javaClass.fields) {
                 const visibility = UMLetGenerator.getVisibilitySymbol(field.modifiers);
-                const fieldName = field.modifiers.has('final') ? `_${field.name}_` : field.name;
-                const fieldLine = `${visibility} ${fieldName} : ${field.type}`;
-                const finalFieldLine = field.modifiers.has('static') ? `_${fieldLine}_` : fieldLine;
-                output += `${finalFieldLine}\n`;
+                let fieldLine = `${visibility} ${field.name} : ${field.type}`;
+
+                // finalの場合は行全体を囲む
+                if (field.modifiers.has('final')) {
+                    fieldLine = `_${fieldLine}_`;
+                }
+
+                // staticの場合は行全体を囲む
+                if (field.modifiers.has('static')) {
+                    fieldLine = `_${fieldLine}_`;
+                }
+
+                output += `${fieldLine}\n`;
             }
         } else {
             // フィールドがない場合は空行を追加
