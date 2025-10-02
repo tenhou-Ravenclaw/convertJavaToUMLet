@@ -399,7 +399,7 @@ class JavaParser {
     analyzeClassRelationships(javaClass, classBody) {
         // コンストラクタとメソッドを分けて解析
         const constructorBodies = this.extractConstructorBodies(classBody, javaClass.name);
-        const methodBodies = this.extractMethodBodies(classBody);
+        const methodBodies = this.extractMethodBodies(classBody, javaClass.name);
 
         // コンポジション関係（コンストラクタ内でのnew演算子）を検出
         for (const constructorBody of constructorBodies) {
@@ -440,18 +440,25 @@ class JavaParser {
     }
 
     /**
-     * メソッド本体の抽出
+     * メソッド本体の抽出（コンストラクタを除外）
      */
-    extractMethodBodies(classBody) {
+    extractMethodBodies(classBody, className) {
         const methodBodies = [];
-        const methodPattern = /\b(?:public|private|protected)?\s*(?:static\s+)?(?:final\s+|abstract\s+)?\s*(?:[a-zA-Z_][a-zA-Z0-9_<>\[\]]*|void)\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^)]*\)\s*\{/g;
+        // コンストラクタを除外するため、戻り値の型が必須のパターンを使用
+        const methodPattern = /\b(?:public|private|protected)?\s*(?:static\s+)?(?:final\s+|abstract\s+)?\s*([a-zA-Z_][a-zA-Z0-9_<>\[\]]*|void)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*\{/g;
 
         let match;
         while ((match = methodPattern.exec(classBody)) !== null) {
-            const bodyStart = match.index + match[0].length - 1;
-            const body = this.extractMethodBody(classBody, bodyStart);
-            if (body) {
-                methodBodies.push(body);
+            const returnType = match[1];
+            const methodName = match[2];
+
+            // コンストラクタでないことを確認（メソッド名がクラス名と同じ場合はコンストラクタ）
+            if (methodName !== className) {
+                const bodyStart = match.index + match[0].length - 1;
+                const body = this.extractMethodBody(classBody, bodyStart);
+                if (body) {
+                    methodBodies.push(body);
+                }
             }
         }
 
@@ -507,28 +514,19 @@ class JavaParser {
 
         while ((match = newPattern.exec(methodBody)) !== null) {
             const targetClass = match[1];
+
             // 基本型やString、コレクション類は除外
             if (!this.isBasicType(targetClass)) {
-                // 既にコンポジション関係がある場合は除外
-                const hasComposition = this.allRelationships.some(rel =>
-                    rel.fromClass === className &&
-                    rel.toClass === targetClass &&
-                    rel.type === RELATIONSHIP_TYPES.COMPOSITION
-                );
-
-                if (!hasComposition) {
-                    this.allRelationships.push(new Relationship(
-                        className,
-                        targetClass,
-                        RELATIONSHIP_TYPES.AGGREGATION,
-                        { location: 'method' }
-                    ));
-                }
+                // 集約関係を追加（コンポジション関係があっても追加する）
+                this.allRelationships.push(new Relationship(
+                    className,
+                    targetClass,
+                    RELATIONSHIP_TYPES.AGGREGATION,
+                    { location: 'method' }
+                ));
             }
         }
-    }
-
-    /**
+    }    /**
      * 依存関係の検出（メソッド引数）
      */
     findDependencyRelationships(javaClass, classBody) {
