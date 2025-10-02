@@ -431,31 +431,6 @@ class UMLetGenerator {
     }
 
     /**
-     * クラス間の関係線生成（コメントなし）
-     */
-    static generateRelationshipsClean(classes) {
-        let output = '';
-
-        for (const javaClass of classes) {
-            // 継承関係
-            if (javaClass.superClass) {
-                output += `type=lt=<|-\n`;
-                output += `${javaClass.superClass}\n`;
-                output += `${javaClass.name}\n\n`;
-            }
-
-            // 実装関係
-            for (const interfaceName of javaClass.interfaces) {
-                output += `type=lt=<<|..\n`;
-                output += `${interfaceName}\n`;
-                output += `${javaClass.name}\n\n`;
-            }
-        }
-
-        return output;
-    }
-
-    /**
      * クラス間の関係線生成（人間が読みやすい形式）
      */
     static generateRelationshipsHumanReadable(classes) {
@@ -588,17 +563,6 @@ class JavaToUMLetConverter {
         }
 
         return UMLetGenerator.generateRelationshipsHumanReadable(parseResult.classes).trim();
-    }
-
-    /**
-     * 関係線定義をUMLet記法で生成
-     */
-    generateRelationshipDefinitionsUMLet(parseResult) {
-        if (parseResult.classes.length <= 1) {
-            return '// 関係線はありません（クラスが1つのみ、または関係性がありません）';
-        }
-
-        return UMLetGenerator.generateRelationshipsClean(parseResult.classes).trim();
     }
 }
 
