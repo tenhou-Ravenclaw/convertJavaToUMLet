@@ -518,12 +518,12 @@ class JavaToUMLetConverter {
      */
     generateClassDefinitions(parseResult) {
         let output = '';
-        
+
         // 各クラス・インターフェースの出力
         for (const javaClass of parseResult.classes) {
             output += UMLetGenerator.generateClassText(javaClass) + '\n\n';
         }
-        
+
         return output.trim();
     }
 
@@ -534,7 +534,7 @@ class JavaToUMLetConverter {
         if (parseResult.classes.length <= 1) {
             return '// 関係線はありません（クラスが1つのみ、または関係性がありません）';
         }
-        
+
         return UMLetGenerator.generateRelationshipsClean(parseResult.classes).trim();
     }
 }

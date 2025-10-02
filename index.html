@@ -169,11 +169,11 @@ public class Car extends AbstractVehicle implements Vehicle {
 
                     // コンバーターを使用してJavaコードを解析
                     const parseResult = converter.parseOnly(javaCode);
-                    
+
                     // クラス定義を生成（コメントなし）
                     const classDefinitions = converter.generateClassDefinitions(parseResult);
                     classDefinitionOutput.value = classDefinitions;
-                    
+
                     // 関係線定義を生成（コメントなし）
                     const relationships = converter.generateRelationshipDefinitions(parseResult);
                     relationshipOutput.value = relationships;
@@ -189,7 +189,7 @@ public class Car extends AbstractVehicle implements Vehicle {
                         '- シンプルなクラス定義から始めてください\n' +
                         '- ネストしたクラスや複雑な構文は避けてください\n' +
                         '- 必要に応じてコードを分割して変換してください';
-                    
+
                     classDefinitionOutput.value = errorMessage;
                     relationshipOutput.value = '';
                 }
