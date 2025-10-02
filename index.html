@@ -20,9 +20,10 @@
         }
 
         .container {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr 1fr;
             gap: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             align-items: flex-start;
             /* 上揃え */
@@ -64,8 +65,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px 0;
-            margin-top: 50px;
+            padding: 20px 10px;
+            margin-top: 180px;
             /* テキストエリアの高さに合わせて調整 */
         }
 
@@ -139,8 +140,13 @@ public class Car extends AbstractVehicle implements Vehicle {
         </div>
 
         <div class="column">
-            <h2>UMLetテキスト出力</h2>
-            <textarea id="umletTextOutput" readonly></textarea>
+            <h2>クラス定義</h2>
+            <textarea id="classDefinitionOutput" readonly></textarea>
+        </div>
+
+        <div class="column">
+            <h2>関係線定義</h2>
+            <textarea id="relationshipOutput" readonly></textarea>
         </div>
     </div>
 
@@ -150,22 +156,31 @@ public class Car extends AbstractVehicle implements Vehicle {
         document.addEventListener('DOMContentLoaded', () => {
             const convertButton = document.getElementById('convertButton');
             const javaCodeInput = document.getElementById('javaCodeInput');
-            const umletTextOutput = document.getElementById('umletTextOutput');
 
             // Java to UMLet Converter のインスタンスを作成
             const converter = new JavaToUMLet.JavaToUMLetConverter();
+
+            const classDefinitionOutput = document.getElementById('classDefinitionOutput');
+            const relationshipOutput = document.getElementById('relationshipOutput');
 
             convertButton.addEventListener('click', () => {
                 try {
                     const javaCode = javaCodeInput.value.trim();
 
-                    // コンバーターを使用してJavaコードをUMLetテキストに変換
-                    const umletText = converter.convert(javaCode);
-                    umletTextOutput.value = umletText;
+                    // コンバーターを使用してJavaコードを解析
+                    const parseResult = converter.parseOnly(javaCode);
+                    
+                    // クラス定義を生成（コメントなし）
+                    const classDefinitions = converter.generateClassDefinitions(parseResult);
+                    classDefinitionOutput.value = classDefinitions;
+                    
+                    // 関係線定義を生成（コメントなし）
+                    const relationships = converter.generateRelationshipDefinitions(parseResult);
+                    relationshipOutput.value = relationships;
 
                 } catch (error) {
                     console.error('解析エラー:', error);
-                    umletTextOutput.value = `エラーが発生しました: ${error.message}\n\n` +
+                    const errorMessage = `エラーが発生しました: ${error.message}\n\n` +
                         '考えられる原因:\n' +
                         '- 不正なJava構文\n' +
                         '- 対応していない言語機能\n' +
@@ -174,6 +189,9 @@ public class Car extends AbstractVehicle implements Vehicle {
                         '- シンプルなクラス定義から始めてください\n' +
                         '- ネストしたクラスや複雑な構文は避けてください\n' +
                         '- 必要に応じてコードを分割して変換してください';
+                    
+                    classDefinitionOutput.value = errorMessage;
+                    relationshipOutput.value = '';
                 }
             });
         });
