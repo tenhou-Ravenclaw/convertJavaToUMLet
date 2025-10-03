@@ -202,11 +202,12 @@ export class JavaParser {
      */
     parseMethods(javaClass, classBody) {
         // メソッド定義のパターン（改良版）- 修飾子の順序に柔軟に対応
-        const methodPattern = /\b(public|private|protected)?\s*(?:(static|final|abstract)\s+)?(?:(static|final|abstract)\s+)?\s*(?:([a-zA-Z_][a-zA-Z0-9_<>\[\]]*|void)\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:throws\s+[^{;]+)?\s*[{;]/g;
+        // コンストラクタと通常のメソッドを分けて処理
 
+        // 1. コンストラクタのパターン
+        const constructorPattern = new RegExp(`\\b(public|private|protected)?\\s*${javaClass.name}\\s*\\(([^)]*)\\)\\s*\\{`, 'g');
         let match;
-        while ((match = methodPattern.exec(classBody)) !== null) {
-            // クラス内のメソッドのみを対象とする（ネストしたクラスのメソッドを除外）
+        while ((match = constructorPattern.exec(classBody)) !== null) {
             const beforeMatch = classBody.substring(0, match.index);
             const openBraces = (beforeMatch.match(/\{/g) || []).length;
             const closeBraces = (beforeMatch.match(/\}/g) || []).length;
@@ -214,18 +215,43 @@ export class JavaParser {
             if (openBraces === closeBraces) {
                 const modifiers = [];
                 if (match[1]) modifiers.push(match[1]); // visibility
+
+                const method = new JavaMethod(javaClass.name, null, modifiers);
+                method.isConstructor = true;
+
+                // パラメータの解析
+                if (match[2].trim()) {
+                    method.parameters = this.parseParameters(match[2]);
+                }
+
+                javaClass.constructors.push(method);
+            }
+        }
+
+        // 2. 通常のメソッドのパターン（戻り値の型は必須）
+        const methodPattern = /\b(public|private|protected)?\s*(?:(static|final|abstract)\s+)?(?:(static|final|abstract)\s+)?\s*([a-zA-Z_][a-zA-Z0-9_<>\[\]]*|void)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:throws\s+[^{;]+)?\s*[{;]/g;
+
+        while ((match = methodPattern.exec(classBody)) !== null) {
+            // クラス内のメソッドのみを対象とする（ネストしたクラスのメソッドを除外）
+            const beforeMatch = classBody.substring(0, match.index);
+            const openBraces = (beforeMatch.match(/\{/g) || []).length;
+            const closeBraces = (beforeMatch.match(/\}/g) || []).length;
+
+            if (openBraces === closeBraces) {
+                const methodName = match[5];
+
+                // コンストラクタは除外（既に処理済み）
+                if (methodName === javaClass.name) {
+                    continue;
+                }
+
+                const modifiers = [];
+                if (match[1]) modifiers.push(match[1]); // visibility
                 if (match[2]) modifiers.push(match[2]); // static, final, or abstract
                 if (match[3] && match[3] !== match[2]) modifiers.push(match[3]); // 重複を避ける
 
-                const methodName = match[5];
-                const returnType = match[4]; // コンストラクタの場合はundefined
+                const returnType = match[4]; // 戻り値の型は必須
                 const method = new JavaMethod(methodName, returnType, modifiers);
-
-                // コンストラクタかどうかの判定
-                method.isConstructor = (methodName === javaClass.name);
-                if (method.isConstructor) {
-                    method.returnType = null;
-                }
 
                 // abstract メソッドかどうかの判定
                 method.isAbstract = modifiers.includes('abstract') || javaClass.type === 'interface';
@@ -235,11 +261,7 @@ export class JavaParser {
                     method.parameters = this.parseParameters(match[6]);
                 }
 
-                if (method.isConstructor) {
-                    javaClass.constructors.push(method);
-                } else {
-                    javaClass.methods.push(method);
-                }
+                javaClass.methods.push(method);
             }
         }
     }

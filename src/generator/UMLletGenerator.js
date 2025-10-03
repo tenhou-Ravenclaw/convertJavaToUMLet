@@ -133,7 +133,8 @@ export class UMLletGenerator {
         // コンストラクタの場合は戻り値型を表示しない
         let formattedMethod = `${symbol} ${method.name}(${params})`;
 
-        if (method.returnType && method.returnType !== 'void' && !method.isConstructor) {
+        // コンストラクタでない場合は戻り値型を表示（voidも含む）
+        if (method.returnType && !method.isConstructor) {
             formattedMethod += `: ${method.returnType}`;
         }
 
