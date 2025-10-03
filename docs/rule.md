@@ -140,6 +140,19 @@ _ + getInstance(): Singleton_
 + setValues(Test3: String, Test4: boolean, Test5: int): void
 ```
 
+### 戻り値型表記
+
+- **コンストラクタ**: 戻り値型は表示しない
+- **通常メソッド**: 戻り値型を必ず表示（`void`も含む）
+
+```
++ VehicleUtils()                    // コンストラクタ（戻り値型なし）
++ performFly(): void                // void型メソッド
++ getSpeed(): double                // 戻り値型あり
+/+ start(): void/                   // 抽象メソッド（void型）
+_+ getInstance(): Singleton_        // staticメソッド
+```
+
 ### 実例
 
 ```
@@ -150,7 +163,8 @@ _ + getInstance(): Singleton_
 /+ start(): void/
 + getVehicleInfo(): String
 _+ getVehicleCount(): int_
-+ setBrand(String): void
++ setBrand(brand: String): void
++ performMaintenance(): void
 ```
 
 ## 関係性表記ルール
