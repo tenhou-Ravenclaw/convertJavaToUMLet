@@ -67,17 +67,21 @@ export class UMLletGenerator {
             content += javaClass.name;
         }
 
-        // フィールド
+        // フィールドセクション（rule.mdの形式に従う）
+        content += '\n--';
         if (javaClass.fields.length > 0) {
-            content += '\n--\n';
+            content += '\n';
             javaClass.fields.forEach(field => {
                 content += this.formatField(field) + '\n';
             });
+        } else {
+            content += '\n'; // フィールドがない場合も空行を追加
         }
 
-        // メソッド
+        // メソッドセクション（rule.mdの形式に従う）
+        content += '--';
         if (javaClass.methods.length > 0 || javaClass.constructors.length > 0) {
-            content += '--\n';
+            content += '\n';
 
             // コンストラクタを先に表示
             if (javaClass.constructors) {
@@ -90,6 +94,8 @@ export class UMLletGenerator {
             javaClass.methods.forEach(method => {
                 content += this.formatMethod(method) + '\n';
             });
+        } else {
+            content += '\n'; // メソッドがない場合も空行を追加
         }
 
         return content.trim();
