@@ -126,36 +126,44 @@
         </div>
     </div>
 
-    <!-- JavaScriptファイルの読み込み -->
-    <script src="logic.js"></script>
-    <script>
+    <!-- JavaScriptファイルの読み込み（モジュラー構造対応） -->
+    <script type="module">
+        import { JavaToUMLletConverter } from './src/index.js';
+
         document.addEventListener('DOMContentLoaded', () => {
             const convertButton = document.getElementById('convertButton');
             const javaCodeInput = document.getElementById('javaCodeInput');
-
-            // Java to UMLet Converter のインスタンスを作成
-            const converter = new JavaToUMLet.JavaToUMLetConverter();
-
             const classDefinitionOutput = document.getElementById('classDefinitionOutput');
             const relationshipOutput = document.getElementById('relationshipOutput');
 
-            // 関係線定義を更新する関数
-            function updateRelationshipOutput(parseResult) {
-                const relationships = converter.generateRelationshipDefinitions(parseResult);
-                relationshipOutput.value = relationships;
-            } convertButton.addEventListener('click', () => {
+            // Java to UMLet Converter のインスタンスを作成
+            const converter = new JavaToUMLletConverter();
+
+            convertButton.addEventListener('click', () => {
                 try {
                     const javaCode = javaCodeInput.value.trim();
 
-                    // コンバーターを使用してJavaコードを解析
-                    const parseResult = converter.parseOnly(javaCode);
+                    if (!javaCode) {
+                        alert('Javaコードを入力してください。');
+                        return;
+                    }
 
-                    // クラス定義を生成（コメントなし）
-                    const classDefinitions = converter.generateClassDefinitions(parseResult);
-                    classDefinitionOutput.value = classDefinitions;
+                    // 新しいモジュラー構造でのコンバーター実行
+                    const result = converter.convert(javaCode);
 
-                    // 関係線定義を生成（分かりやすい表示）
-                    updateRelationshipOutput(parseResult);
+                    if (result.success) {
+                        // クラス定義を生成（独自フォーマット）
+                        let classDefinitions = '';
+                        result.classes.forEach(javaClass => {
+                            classDefinitions += converter.generator.generateClassContent(javaClass) + '\n\n---\n\n';
+                        });
+                        classDefinitionOutput.value = classDefinitions;
+
+                        // 関係性の解析結果を表示
+                        relationshipOutput.value = result.relationshipText;
+                    } else {
+                        throw new Error(result.error);
+                    }
 
                 } catch (error) {
                     console.error('解析エラー:', error);
